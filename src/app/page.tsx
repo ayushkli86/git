@@ -622,7 +622,7 @@ function StartScreen({ onStart, onContinue, hasProgress }: { onStart: () => void
           className="mt-6 pt-4 border-t border-gray-800/50"
         >
           <p className="text-gray-600 text-xs">
-            Made with <span className="text-red-500">&hearts;</span> by{' '}
+            Made by{' '}
             <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="text-green-500/70 hover:text-green-400 transition-colors font-medium">
               Ayush Katuwal
             </a>
@@ -812,7 +812,7 @@ function GameCompleteScreen({ score, xp, completedScenarios, onRestart }: { scor
         {/* Footer */}
         <div className="mt-6 pt-4 border-t border-gray-800/50">
           <p className="text-gray-600 text-xs">
-            Made with <span className="text-red-500">&hearts;</span> by{' '}
+            Made by{' '}
             <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="text-green-500/70 hover:text-green-400 transition-colors font-medium">
               Ayush Katuwal
             </a>
@@ -1118,9 +1118,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-gray-800/30 bg-[#0a0e17]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-2 text-xs text-gray-600">
-          <span>Made with</span>
-          <span className="text-red-500">&hearts;</span>
-          <span>by</span>
+          <span>Made by</span>
           <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-green-500/70 hover:text-green-400 transition-colors font-medium">
             <Github size={14} />
             Ayush Katuwal
