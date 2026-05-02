@@ -626,7 +626,7 @@ function StartScreen({ onStart, onContinue, hasProgress }: { onStart: () => void
             <span className="text-gray-700">|</span>
             <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-500/70 hover:text-green-400 transition-colors font-medium">
               <Github size={12} />
-              Follow on GitHub
+              Follow on GitHub — ayushkli86
             </a>
           </div>
         </motion.div>
@@ -818,7 +818,7 @@ function GameCompleteScreen({ score, xp, completedScenarios, onRestart }: { scor
             <span className="text-gray-700">|</span>
             <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-500/70 hover:text-green-400 transition-colors font-medium">
               <Github size={12} />
-              Follow on GitHub
+              Follow on GitHub — ayushkli86
             </a>
           </div>
         </div>
@@ -1126,7 +1126,7 @@ export default function Home() {
           <span className="text-gray-700">|</span>
           <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-green-500/70 hover:text-green-400 transition-colors font-medium">
             <Github size={14} />
-            Follow on GitHub
+            Follow on GitHub — ayushkli86
           </a>
         </div>
       </footer>
