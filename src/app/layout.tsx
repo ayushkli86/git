@@ -13,11 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Git Sikau — Learn Git Interactively | Interactive Git Learning Game",
+  title: "Git Sikau — Learn Git Interactively",
   description: "An immersive terminal simulation game that teaches you Git through 10 hands-on missions. Type real git commands, solve scenarios, and become a Git master.",
-  icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
-  },
 };
 
 export default function RootLayout({
