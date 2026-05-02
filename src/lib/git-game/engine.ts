@@ -973,7 +973,7 @@ function handleLog(state: GitState, args: string[]): CommandResult {
     allCommits.forEach(({ commit, branch }) => {
       const branchLabel = branch !== state.currentBranch ? ` (${branch})` : '';
       output += `commit ${commit.hash}${branchLabel}\n`;
-      output += `Author: Player <player@gitquest.dev>\n`;
+      output += `Author: Player <player@gitsikau.dev>\n`;
       output += `Date:   ${new Date(commit.timestamp).toLocaleString()}\n\n`;
       output += `    ${commit.message}\n\n`;
     });
@@ -1188,6 +1188,6 @@ function handleShow(state: GitState, args: string[]): CommandResult {
 
   return {
     success: true,
-    message: `commit ${targetCommit.hash}\nAuthor: Player <player@gitquest.dev>\nDate:   ${new Date(targetCommit.timestamp).toLocaleString()}\n\n    ${targetCommit.message}`,
+    message: `commit ${targetCommit.hash}\nAuthor: Player <player@gitsikau.dev>\nDate:   ${new Date(targetCommit.timestamp).toLocaleString()}\n\n    ${targetCommit.message}`,
   };
 }

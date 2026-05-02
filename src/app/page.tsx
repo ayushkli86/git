@@ -9,7 +9,7 @@ import {
   Terminal, GitBranch, Trophy, Star, Zap, ChevronRight,
   Play, RotateCcw, Lightbulb, CheckCircle2, Circle,
   Lock, Unlock, Rocket, Shield, Database, Cpu,
-  ArrowRight, Sparkles, Volume2, VolumeX,
+  ArrowRight, Sparkles, Volume2, VolumeX, Github,
 } from 'lucide-react';
 
 // ============ AUDIO ENGINE ============
@@ -195,7 +195,7 @@ function GameTerminal({
           <div className="w-3 h-3 rounded-full bg-green-500/80" />
         </div>
         <div className="flex-1 text-center">
-          <span className="text-green-500/70 text-xs tracking-wider">GITQUEST TERMINAL</span>
+          <span className="text-green-500/70 text-xs tracking-wider">GIT SIKAU TERMINAL</span>
         </div>
         <GitBranch size={14} className="text-green-500/50" />
       </div>
@@ -206,7 +206,7 @@ function GameTerminal({
           <div key={line.id} className={`${getLineColor(line.type)} whitespace-pre-wrap break-all leading-relaxed`}>
             {line.type === 'input' ? (
               <span>
-                <span className="text-green-500 font-bold">agent@gitquest</span>
+                <span className="text-green-500 font-bold">agent@gitsikau</span>
                 <span className="text-gray-500">:</span>
                 <span className="text-cyan-500">{currentBranch}</span>
                 <span className="text-gray-500">$ </span>
@@ -221,7 +221,7 @@ function GameTerminal({
 
       {/* Terminal Input */}
       <form onSubmit={handleSubmit} className="flex items-center px-4 py-3 border-t border-green-900/30 bg-[#0d1117]">
-        <span className="text-green-500 font-bold mr-1">agent@gitquest</span>
+        <span className="text-green-500 font-bold mr-1">agent@gitsikau</span>
         <span className="text-gray-500">:</span>
         <span className="text-cyan-500 mr-1">{currentBranch}</span>
         <span className="text-gray-500 mr-1">$</span>
@@ -536,7 +536,7 @@ function StartScreen({ onStart, onContinue, hasProgress }: { onStart: () => void
           className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight"
         >
           <span className="bg-gradient-to-r from-green-400 via-cyan-400 to-green-400 bg-clip-text text-transparent">
-            GitQuest
+            Git Sikau
           </span>
         </motion.h1>
 
@@ -546,7 +546,7 @@ function StartScreen({ onStart, onContinue, hasProgress }: { onStart: () => void
           transition={{ delay: 0.5 }}
           className="text-gray-400 text-lg mb-2"
         >
-          Master the Branch
+          Learn Git Interactively
         </motion.p>
 
         <motion.p
@@ -613,6 +613,21 @@ function StartScreen({ onStart, onContinue, hasProgress }: { onStart: () => void
         >
           Type real Git commands in the terminal to complete each mission
         </motion.p>
+
+        {/* Footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+          className="mt-6 pt-4 border-t border-gray-800/50"
+        >
+          <p className="text-gray-600 text-xs">
+            Made with <span className="text-red-500">&hearts;</span> by{' '}
+            <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="text-green-500/70 hover:text-green-400 transition-colors font-medium">
+              Ayush Katuwal
+            </a>
+          </p>
+        </motion.div>
       </motion.div>
     </div>
   );
@@ -793,6 +808,16 @@ function GameCompleteScreen({ score, xp, completedScenarios, onRestart }: { scor
           <RotateCcw size={18} />
           Play Again
         </button>
+
+        {/* Footer */}
+        <div className="mt-6 pt-4 border-t border-gray-800/50">
+          <p className="text-gray-600 text-xs">
+            Made with <span className="text-red-500">&hearts;</span> by{' '}
+            <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="text-green-500/70 hover:text-green-400 transition-colors font-medium">
+              Ayush Katuwal
+            </a>
+          </p>
+        </div>
       </motion.div>
     </div>
   );
@@ -826,7 +851,7 @@ export default function Home() {
       {
         id: 'welcome',
         type: 'system',
-        content: `╔══════════════════════════════════════════════╗\n║  GITQUEST — Mission ${scenarios[idx].level}: ${scenarios[idx].title.padEnd(32)}║\n╚══════════════════════════════════════════════╝\n\n${scenarios[idx].story}\n\nShell commands available: touch, echo, cat, ls, mkdir, rm, pwd, clear, help\nType 'help' to see all commands. Good luck, Agent!`,
+        content: `╔══════════════════════════════════════════════╗\n║  GIT SIKAU — Mission ${scenarios[idx].level}: ${scenarios[idx].title.padEnd(32)}║\n╚══════════════════════════════════════════════╝\n\n${scenarios[idx].story}\n\nShell commands available: touch, echo, cat, ls, mkdir, rm, pwd, clear, help\nType 'help' to see all commands. Good luck, Agent!`,
         timestamp: Date.now(),
       },
     ]);
@@ -912,7 +937,7 @@ export default function Home() {
         {
           id: 'welcome',
           type: 'system',
-          content: `╔══════════════════════════════════════════════╗\n║  GITQUEST — Mission ${next.level}: ${next.title.padEnd(32)}║\n╚══════════════════════════════════════════════╝\n\n${next.story}\n\nType 'git' commands to complete your mission.`,
+          content: `╔══════════════════════════════════════════════╗\n║  GIT SIKAU — Mission ${next.level}: ${next.title.padEnd(32)}║\n╚══════════════════════════════════════════════╝\n\n${next.story}\n\nType 'git' commands to complete your mission.`,
           timestamp: Date.now(),
         },
       ]);
@@ -975,7 +1000,7 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <GitBranch size={20} className="text-green-400" />
               <span className="font-bold text-lg bg-gradient-to-r from-green-400 to-cyan-400 bg-clip-text text-transparent">
-                GitQuest
+                Git Sikau
               </span>
             </div>
             <div className="hidden sm:block h-5 w-px bg-gray-800" />
@@ -1089,6 +1114,19 @@ export default function Home() {
           />
         )}
       </AnimatePresence>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-gray-800/30 bg-[#0a0e17]/90 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-2 text-xs text-gray-600">
+          <span>Made with</span>
+          <span className="text-red-500">&hearts;</span>
+          <span>by</span>
+          <a href="https://github.com/ayushkli86" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-green-500/70 hover:text-green-400 transition-colors font-medium">
+            <Github size={14} />
+            Ayush Katuwal
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

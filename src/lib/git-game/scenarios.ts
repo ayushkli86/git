@@ -469,11 +469,23 @@ export const scenarios: Scenario[] = [
     level: 7,
     title: 'Emergency Protocol',
     subtitle: 'Stash and Context Switch',
-    story: `RED ALERT! You're in the middle of developing a search feature when HQ reports a production bug. You can't commit half-finished work, but can't abandon it either.\n\nYour mission:\n1. Stash your work-in-progress\n2. Switch to main and fix the urgent bug\n3. Go back and restore your work with stash pop\n\nThis is real-world Git mastery, Agent.`,
+    story: `RED ALERT! You're in the middle of developing a search feature when HQ reports a production bug. You can't commit half-finished work, but can't abandon it either.\n\nYour mission:\n1. Create your work-in-progress files (search.js and search.test.js)\n2. Stage and prepare to stash\n3. Stash your work-in-progress\n4. Switch to main and fix the urgent bug\n5. Go back and restore your work with stash pop\n\nThis is real-world Git mastery, Agent.`,
     objectives: [
       {
+        id: 'create-files',
+        description: 'Create search.js and search.test.js files (touch search.js search.test.js)',
+        completed: false,
+        check: (_state, history) => history.some(l => l.type === 'input' && l.content.match(/touch\s+search/)),
+      },
+      {
+        id: 'write-code',
+        description: 'Write code to search.js (echo "..." > search.js)',
+        completed: false,
+        check: (state) => state.workspaceFiles['search.js'] && state.workspaceFiles['search.js'].length > 0,
+      },
+      {
         id: 'stash-work',
-        description: 'Stash your current work (git stash)',
+        description: 'Stage files and stash your work (git add . then git stash)',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'success' && l.content.includes('stash') && l.content.includes('Saved')),
       },
@@ -503,6 +515,9 @@ export const scenarios: Scenario[] = [
       },
     ],
     hints: [
+      'Create search files: touch search.js search.test.js',
+      'Write code: echo "function search() {}" > search.js',
+      'Stage all: git add .',
       'Save work: git stash',
       'Switch: git checkout main',
       'Create hotfix: git checkout -b hotfix/urgent-fix',
@@ -523,12 +538,10 @@ export const scenarios: Scenario[] = [
         },
         HEAD: c2.hash,
         workspaceFiles: {
-          'search.js': 'function search() { /* TODO */ }',
-          'search.test.js': '// tests',
           'README.md': '# Project\nReady.',
           'app.js': '// main app',
         },
-        stagedFiles: ['search.js'],
+        stagedFiles: [],
         committedFiles: ['README.md', 'app.js'],
         remotes: {
           origin: {
@@ -547,7 +560,7 @@ export const scenarios: Scenario[] = [
       return { completed: true, message: 'Mission Complete! You handled a real-world emergency like a pro. Stashing saves developers daily!' };
     },
     reward: 200,
-    commands: ['git stash', 'git stash pop', 'git checkout', 'touch', 'git add', 'git commit'],
+    commands: ['touch', 'echo', 'git add', 'git stash', 'git stash pop', 'git checkout', 'git commit'],
   },
 
   // ============ MISSION 8: TIME REWIND ============
