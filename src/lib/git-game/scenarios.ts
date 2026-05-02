@@ -9,10 +9,26 @@ function baseState(overrides?: Partial<GitState>): GitState {
     remotes: {},
     workspaceFiles: {},
     stagedFiles: [],
+    committedFiles: [],
     stash: [],
     tags: [],
     HEAD: '',
     ...overrides,
+  };
+}
+
+function commit(msg: string, branch: string, files: Record<string, string>, parents: string[] = [], parentHashes: string[] = []): import('./types').Commit {
+  const chars = '0123456789abcdef';
+  let hash = '';
+  for (let i = 0; i < 40; i++) hash += chars[Math.floor(Math.random() * 16)];
+  return {
+    hash,
+    shortHash: hash.substring(0, 7),
+    message: msg,
+    branch,
+    timestamp: Date.now() - Math.random() * 100000,
+    parents: parentHashes,
+    files: { ...files },
   };
 }
 
@@ -23,40 +39,47 @@ export const scenarios: Scenario[] = [
     level: 1,
     title: 'Genesis',
     subtitle: 'Initialize Your First Repository',
-    story: `Welcome, Agent. You've been assigned to a classified project codenamed "GENESIS." Your mission: establish a secure code repository from scratch. The agency needs you to initialize a new Git repository, create the first file, and record the initial commit. This is where every great project begins — with a single command.`,
+    story: `Welcome, Agent. You've been assigned to a classified project codenamed "GENESIS." Your mission: establish a secure code repository from scratch.\n\nThe agency needs you to:\n1. Initialize a new Git repository\n2. Create your first file (README.md)\n3. Stage it and commit it\n\nThis is where every great project begins — with a single command.`,
     objectives: [
       {
         id: 'init',
-        description: 'Initialize a new Git repository',
+        description: 'Initialize a new Git repository (git init)',
         completed: false,
         check: (state) => state.initialized,
       },
       {
-        id: 'add-readme',
-        description: 'Stage README.md (use: touch README.md, then git add README.md)',
+        id: 'touch',
+        description: 'Create a file called README.md (touch README.md)',
         completed: false,
-        check: (state) => state.stagedFiles.includes('README.md') || (state.branches['main']?.commits.length > 0),
+        check: (state, history) => history.some(l => l.type === 'input' && l.content.match(/touch\s+README\.md/)),
+      },
+      {
+        id: 'add',
+        description: 'Stage README.md (git add README.md)',
+        completed: false,
+        check: (state) => state.stagedFiles.includes('README.md'),
       },
       {
         id: 'commit',
-        description: 'Create your first commit with message "initial commit"',
+        description: 'Commit with message "initial commit"',
         completed: false,
-        check: (state) => state.branches['main']?.commits.length > 0 && state.branches['main']?.commits[0].message.toLowerCase().includes('initial'),
+        check: (state) => state.branches['main']?.commits.length > 0 && state.branches['main'].commits[0].message.toLowerCase().includes('initial'),
       },
     ],
     hints: [
-      'Start with: git init',
-      'Create a file first: The game auto-creates files when you git add them — just type: git add README.md',
-      'Commit your changes: git commit -m "initial commit"',
+      'Step 1: git init',
+      'Step 2: touch README.md',
+      'Step 3: git add README.md',
+      'Step 4: git commit -m "initial commit"',
     ],
     initialState: () => baseState(),
     validate: (state) => {
-      if (!state.initialized) return { completed: false, message: 'You haven\'t initialized a repository yet.' };
-      if (!state.branches['main'] || state.branches['main'].commits.length === 0) return { completed: false, message: 'You haven\'t made a commit yet.' };
+      if (!state.initialized) return { completed: false, message: 'You haven\'t initialized a repository yet. Try: git init' };
+      if (state.branches['main']?.commits.length === 0) return { completed: false, message: 'No commits yet. Create a file with touch, then git add and git commit.' };
       return { completed: true, message: 'Mission Complete! You\'ve successfully created your first Git repository and made your initial commit. Every developer\'s journey starts here.' };
     },
     reward: 100,
-    commands: ['git init', 'git add', 'git commit'],
+    commands: ['git init', 'touch', 'git add', 'git commit'],
   },
 
   // ============ MISSION 2: THE CLONE PROTOCOL ============
@@ -65,40 +88,53 @@ export const scenarios: Scenario[] = [
     level: 2,
     title: 'The Clone Protocol',
     subtitle: 'Join an Existing Project',
-    story: `Intel reports that a top-secret project exists on the agency's remote server. Your mission: infiltrate by cloning the repository. Once inside, analyze the codebase — check the branch structure and review the commit history. Knowledge is power, Agent.`,
+    story: `Intel reports that a top-secret project exists on the agency's remote server. Your mission: infiltrate by cloning the repository.\n\nOnce inside:\n1. Check what files were cloned\n2. View the branch structure\n3. Review the commit history\n\nKnowledge is power, Agent.`,
     objectives: [
       {
         id: 'clone',
-        description: 'Clone the repository from https://github.com/agency/secret-project.git',
+        description: 'Clone the repo from https://github.com/agency/secret-project.git',
         completed: false,
         check: (state) => state.cloned,
       },
       {
+        id: 'ls',
+        description: 'List files in the cloned repo (ls)',
+        completed: false,
+        check: (_state, history) => history.some(l => l.type === 'input' && l.content.trim() === 'ls'),
+      },
+      {
+        id: 'cat',
+        description: 'View the README.md file (cat README.md)',
+        completed: false,
+        check: (_state, history) => history.some(l => l.type === 'input' && l.content.match(/cat\s+README/)),
+      },
+      {
         id: 'branch-list',
-        description: 'List all branches (local and remote)',
+        description: 'List all branches including remote (git branch -a)',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git branch') && l.content.includes('-a')),
       },
       {
-        id: 'check-log',
-        description: 'View the commit history',
+        id: 'log',
+        description: 'View the commit history (git log --oneline)',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git log')),
       },
     ],
     hints: [
-      'Clone the repo: git clone https://github.com/agency/secret-project.git',
-      'See all branches: git branch -a',
-      'View history: git log --oneline',
+      'Clone: git clone https://github.com/agency/secret-project.git',
+      'See files: ls',
+      'Read a file: cat README.md',
+      'See branches: git branch -a',
+      'See history: git log --oneline',
     ],
     initialState: () => baseState(),
     validate: (state) => {
       if (!state.cloned) return { completed: false, message: 'You haven\'t cloned the repository yet.' };
-      if (!state.initialized) return { completed: false, message: 'Repository not properly set up.' };
       return { completed: true, message: 'Mission Complete! You\'ve successfully cloned a repository and explored its structure. You now know how to join any project team.' };
     },
     reward: 120,
-    commands: ['git clone', 'git branch', 'git log'],
+    commands: ['git clone', 'ls', 'cat', 'git branch', 'git log'],
   },
 
   // ============ MISSION 3: PARALLEL WORLDS ============
@@ -107,39 +143,45 @@ export const scenarios: Scenario[] = [
     level: 3,
     title: 'Parallel Worlds',
     subtitle: 'Create and Switch Branches',
-    story: `The agency needs you to work on a new feature while keeping the main code stable. Your mission: create a parallel development line — a "branch." You'll learn the fundamental skill of working on multiple features simultaneously without risking the main codebase. Welcome to parallel universes, Agent.`,
+    story: `The agency needs you to work on a new feature while keeping the main code stable. Your mission: create a parallel development line — a "branch."\n\nOn your feature branch:\n1. Create a new file called login.js\n2. Write some code in it\n3. Commit it\n4. Switch back to main\n\nWelcome to parallel universes, Agent.`,
     objectives: [
       {
         id: 'create-branch',
-        description: 'Create a new branch called "feature-login"',
+        description: 'Create and switch to branch "feature-login" (git checkout -b feature-login)',
         completed: false,
-        check: (state) => !!state.branches['feature-login'],
+        check: (state) => state.currentBranch === 'feature-login' && !!state.branches['feature-login'],
       },
       {
-        id: 'switch-branch',
-        description: 'Switch to the feature-login branch',
+        id: 'create-file',
+        description: 'Create login.js file (touch login.js)',
         completed: false,
-        check: (state) => state.currentBranch === 'feature-login',
+        check: (state, history) => history.some(l => l.type === 'input' && l.content.match(/touch\s+login\.js/)),
       },
       {
-        id: 'commit-feature',
-        description: 'Make a commit on feature-login with message "add login form"',
+        id: 'write-code',
+        description: 'Write code to login.js (echo "..." > login.js)',
+        completed: false,
+        check: (state) => state.workspaceFiles['login.js'] && state.workspaceFiles['login.js'].length > 0,
+      },
+      {
+        id: 'commit',
+        description: 'Commit on feature-login with message about login',
         completed: false,
         check: (state) => state.branches['feature-login']?.commits.some(c => c.message.toLowerCase().includes('login')),
       },
       {
         id: 'switch-back',
-        description: 'Switch back to main branch',
+        description: 'Switch back to main (git checkout main)',
         completed: false,
-        check: (state, history) => {
-          const switchCommands = history.filter(l => l.type === 'input' && l.content.includes('checkout main'));
-          return switchCommands.length >= 1 && state.currentBranch === 'main';
-        },
+        check: (state) => state.currentBranch === 'main',
       },
     ],
     hints: [
-      'Create and switch in one step: git checkout -b feature-login',
-      'Make a commit: first git add README.md, then git commit -m "add login form"',
+      'Create + switch branch: git checkout -b feature-login',
+      'Create file: touch login.js',
+      'Write code: echo "function login() {}" > login.js',
+      'Stage: git add login.js',
+      'Commit: git commit -m "add login functionality"',
       'Go back: git checkout main',
     ],
     initialState: () => baseState({
@@ -149,48 +191,24 @@ export const scenarios: Scenario[] = [
         main: {
           name: 'main',
           commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 100000,
-              parents: [],
-            },
+            commit('Initial commit', 'main', { 'README.md': '# Project' }, []),
           ],
           isActive: true,
           color: '#00ff41',
         },
       },
-      HEAD: 'a1b2c3d4e5f6g7h8i9j0',
-      remotes: {
-        origin: {
-          name: 'origin',
-          url: 'https://github.com/agency/project.git',
-          branches: {
-            main: {
-              name: 'main',
-              commits: [{
-                hash: 'a1b2c3d4e5f6g7h8i9j0',
-                shortHash: 'a1b2c3d',
-                message: 'Initial commit',
-                branch: 'main',
-                timestamp: Date.now() - 100000,
-                parents: [],
-              }],
-            },
-          },
-        },
-      },
+      HEAD: 'init123',
+      workspaceFiles: { 'README.md': '# Project' },
+      committedFiles: ['README.md'],
     }),
     validate: (state) => {
       if (!state.branches['feature-login']) return { completed: false, message: 'You haven\'t created the feature-login branch.' };
-      if (!state.branches['feature-login'].commits.some(c => c.message.toLowerCase().includes('login'))) return { completed: false, message: 'You haven\'t committed to the feature branch.' };
+      if (!state.branches['feature-login'].commits.some(c => c.message.toLowerCase().includes('login'))) return { completed: false, message: 'Commit something about login on your feature branch.' };
       if (state.currentBranch !== 'main') return { completed: false, message: 'Switch back to main to complete the mission.' };
-      return { completed: true, message: 'Mission Complete! You\'ve mastered the art of branching — creating parallel worlds for different features. This is the #1 most important Git skill for team collaboration.' };
+      return { completed: true, message: 'Mission Complete! You\'ve mastered branching — creating parallel lines of development. This is the #1 most important Git skill!' };
     },
     reward: 150,
-    commands: ['git branch', 'git checkout', 'git checkout -b'],
+    commands: ['git checkout -b', 'touch', 'echo', 'git add', 'git commit', 'git checkout'],
   },
 
   // ============ MISSION 4: UPLOAD TRANSMISSION ============
@@ -199,7 +217,7 @@ export const scenarios: Scenario[] = [
     level: 4,
     title: 'Upload Transmission',
     subtitle: 'Push Your Code to the Cloud',
-    story: `You've been working on a feature locally. Now it's time to transmit your code to the agency's central server. Your mission: push your local branch to the remote repository so your teammates can see your work. The -u flag will set up tracking for future pushes — remember it well, Agent.`,
+    story: `You've been working on a feature locally. Now it's time to transmit your code to the agency's central server.\n\nYour mission:\n1. Create a feature branch for payment\n2. Create and write a payment.js file\n3. Commit it\n4. Push it to the remote server\n\nThe -u flag sets up tracking — remember it well, Agent.`,
     objectives: [
       {
         id: 'create-feature',
@@ -208,22 +226,31 @@ export const scenarios: Scenario[] = [
         check: (state) => state.currentBranch === 'feature-payment' && !!state.branches['feature-payment'],
       },
       {
+        id: 'create-file',
+        description: 'Create payment.js and write content to it',
+        completed: false,
+        check: (state) => state.workspaceFiles['payment.js'] && state.workspaceFiles['payment.js'].length > 0,
+      },
+      {
         id: 'commit-work',
-        description: 'Make a commit with message "add payment module"',
+        description: 'Commit with message about payment module',
         completed: false,
         check: (state) => state.branches['feature-payment']?.commits.some(c => c.message.toLowerCase().includes('payment')),
       },
       {
         id: 'push-branch',
-        description: 'Push feature-payment to remote (with tracking)',
+        description: 'Push feature-payment to remote with tracking',
         completed: false,
-        check: (state) => !!state.remotes['origin']?.branches['feature-payment'],
+        check: (_state, history) => history.some(l => l.type === 'success' && l.content.includes('feature-payment')),
       },
     ],
     hints: [
-      'Create the branch: git checkout -b feature-payment',
-      'Commit: git add README.md && git commit -m "add payment module"',
-      'Push with tracking: git push -u origin feature-payment',
+      'git checkout -b feature-payment',
+      'touch payment.js',
+      'echo "function processPayment() {}" > payment.js',
+      'git add payment.js',
+      'git commit -m "add payment module"',
+      'git push -u origin feature-payment',
     ],
     initialState: () => baseState({
       initialized: true,
@@ -232,20 +259,15 @@ export const scenarios: Scenario[] = [
         main: {
           name: 'main',
           commits: [
-            {
-              hash: 'x1y2z3a4b5c6d7e8f9g0',
-              shortHash: 'x1y2z3a',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 100000,
-              parents: [],
-            },
+            commit('Initial commit', 'main', { 'README.md': '# Project' }, []),
           ],
           isActive: true,
           color: '#00ff41',
         },
       },
-      HEAD: 'x1y2z3a4b5c6d7e8f9g0',
+      HEAD: 'init123',
+      workspaceFiles: { 'README.md': '# Project' },
+      committedFiles: ['README.md'],
       remotes: {
         origin: {
           name: 'origin',
@@ -253,14 +275,7 @@ export const scenarios: Scenario[] = [
           branches: {
             main: {
               name: 'main',
-              commits: [{
-                hash: 'x1y2z3a4b5c6d7e8f9g0',
-                shortHash: 'x1y2z3a',
-                message: 'Initial commit',
-                branch: 'main',
-                timestamp: Date.now() - 100000,
-                parents: [],
-              }],
+              commits: [commit('Initial commit', 'main', { 'README.md': '# Project' }, [])],
             },
           },
         },
@@ -268,12 +283,12 @@ export const scenarios: Scenario[] = [
     }),
     validate: (state) => {
       if (!state.branches['feature-payment']) return { completed: false, message: 'Create the feature-payment branch first.' };
-      if (!state.branches['feature-payment'].commits.some(c => c.message.toLowerCase().includes('payment'))) return { completed: false, message: 'You need to commit your payment module work.' };
-      if (!state.remotes['origin']?.branches['feature-payment']) return { completed: false, message: 'Push your branch to the remote.' };
-      return { completed: true, message: 'Mission Complete! Your code has been transmitted to the remote server. Your team can now review and collaborate on your feature branch.' };
+      if (!state.branches['feature-payment'].commits.some(c => c.message.toLowerCase().includes('payment'))) return { completed: false, message: 'Commit your payment module work.' };
+      if (!state.remotes['origin']?.branches['feature-payment']) return { completed: false, message: 'Push your branch to the remote: git push -u origin feature-payment' };
+      return { completed: true, message: 'Mission Complete! Your code has been transmitted to the remote server. Your team can now review your work.' };
     },
     reward: 150,
-    commands: ['git checkout -b', 'git push', 'git push -u'],
+    commands: ['git checkout -b', 'touch', 'echo', 'git add', 'git commit', 'git push -u'],
   },
 
   // ============ MISSION 5: SYNC STATION ============
@@ -282,17 +297,17 @@ export const scenarios: Scenario[] = [
     level: 5,
     title: 'Sync Station',
     subtitle: 'Pull and Fetch Remote Changes',
-    story: `Alert! Your teammates have pushed new updates to the main branch while you were away. Your mission: synchronize your local repository with the remote. You'll learn the crucial difference between fetch (preview changes) and pull (download + apply). Staying in sync is essential for team harmony, Agent.`,
+    story: `Alert! Your teammates have pushed new updates to the main branch while you were away.\n\nYour mission: synchronize your local repository with the remote.\n1. Preview changes with fetch (download without applying)\n2. Check what branches exist\n3. Apply changes with pull (download + merge)\n4. Verify sync status\n\nThe difference between fetch and pull is crucial, Agent.`,
     objectives: [
       {
         id: 'fetch',
-        description: 'Fetch changes from remote without applying them',
+        description: 'Fetch changes from remote (git fetch origin)',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git fetch')),
       },
       {
-        id: 'check-remote',
-        description: 'Check remote branch status',
+        id: 'branch-list',
+        description: 'Check branch status (git branch -a)',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git branch') && l.content.includes('-a')),
       },
@@ -300,97 +315,63 @@ export const scenarios: Scenario[] = [
         id: 'pull',
         description: 'Pull latest changes from origin/main',
         completed: false,
-        check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git pull')),
+        check: (state) => {
+          const localMain = state.branches['main']?.commits || [];
+          const remoteMain = state.remotes['origin']?.branches['main']?.commits || [];
+          return localMain.length >= remoteMain.length && localMain.length > 1;
+        },
       },
       {
-        id: 'verify-sync',
-        description: 'Verify you\'re up to date with git status',
+        id: 'status',
+        description: 'Verify sync with git status',
         completed: false,
-        check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git status')),
+        check: (_state, history) => history.some(l => l.type === 'input' && l.content.match(/git\s+status\s*$/)),
       },
     ],
     hints: [
       'Preview changes: git fetch origin',
       'See all branches: git branch -a',
-      'Download and apply: git pull origin main',
+      'Download + apply: git pull origin main',
       'Check status: git status',
     ],
-    initialState: () => baseState({
-      initialized: true,
-      currentBranch: 'main',
-      branches: {
-        main: {
-          name: 'main',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 200000,
-              parents: [],
-            },
-            {
-              hash: 'f1e2d3c4b5a6f7e8d9c0',
-              shortHash: 'f1e2d3c',
-              message: 'Add project structure',
-              branch: 'main',
-              timestamp: Date.now() - 100000,
-              parents: ['a1b2c3d4e5f6g7h8i9j0'],
-            },
-          ],
-          isActive: true,
-          color: '#00ff41',
+    initialState: () => (() => {
+      const c1 = commit('Initial commit', 'main', { 'README.md': '# Project' }, []);
+      const c2 = commit('Add project structure', 'main', { 'README.md': '# Project\n\nSetup complete.', 'index.html': '<html></html>' }, [c1.hash]);
+      const c3 = commit('Update README with team info', 'main', { 'README.md': '# Project\n\nBy: Team Alpha\n\nSetup complete.', 'index.html': '<html></html>' }, [c2.hash]);
+      return baseState({
+        initialized: true,
+        currentBranch: 'main',
+        branches: {
+          main: {
+            name: 'main',
+            commits: [c1, c2],
+            isActive: true,
+            color: '#00ff41',
+          },
         },
-      },
-      HEAD: 'f1e2d3c4b5a6f7e8d9c0',
-      remotes: {
-        origin: {
-          name: 'origin',
-          url: 'https://github.com/agency/project.git',
-          branches: {
-            main: {
-              name: 'main',
-              commits: [
-                {
-                  hash: 'a1b2c3d4e5f6g7h8i9j0',
-                  shortHash: 'a1b2c3d',
-                  message: 'Initial commit',
-                  branch: 'main',
-                  timestamp: Date.now() - 200000,
-                  parents: [],
-                },
-                {
-                  hash: 'f1e2d3c4b5a6f7e8d9c0',
-                  shortHash: 'f1e2d3c',
-                  message: 'Add project structure',
-                  branch: 'main',
-                  timestamp: Date.now() - 100000,
-                  parents: ['a1b2c3d4e5f6g7h8i9j0'],
-                },
-                {
-                  hash: 'z9y8x7w6v5u4t3s2r1q0',
-                  shortHash: 'z9y8x7w',
-                  message: 'Update README with team info',
-                  branch: 'main',
-                  timestamp: Date.now() - 50000,
-                  parents: ['f1e2d3c4b5a6f7e8d9c0'],
-                },
-              ],
+        HEAD: c2.hash,
+        workspaceFiles: { 'README.md': '# Project\n\nSetup complete.', 'index.html': '<html></html>' },
+        committedFiles: ['README.md', 'index.html'],
+        remotes: {
+          origin: {
+            name: 'origin',
+            url: 'https://github.com/agency/project.git',
+            branches: {
+              main: { name: 'main', commits: [c1, c2, c3] },
             },
           },
         },
-      },
-    }),
+      });
+    })(),
     validate: (state) => {
       const localMain = state.branches['main'];
       const remoteMain = state.remotes['origin']?.branches['main'];
-      if (!localMain || !remoteMain) return { completed: false, message: 'Something went wrong with the repository.' };
+      if (!localMain || !remoteMain) return { completed: false, message: 'Something went wrong.' };
       if (localMain.commits.length < remoteMain.commits.length) return { completed: false, message: 'You haven\'t pulled the latest changes yet.' };
-      return { completed: true, message: 'Mission Complete! You\'re now fully synchronized with your team. The difference between fetch (preview) and pull (download+merge) is a key Git concept you\'ve mastered.' };
+      return { completed: true, message: 'Mission Complete! You\'re now synchronized with your team. Remember: fetch = preview, pull = download + merge.' };
     },
     reward: 130,
-    commands: ['git fetch', 'git pull', 'git status'],
+    commands: ['git fetch', 'git pull', 'git status', 'git branch -a'],
   },
 
   // ============ MISSION 6: CODE COLLISION ============
@@ -399,7 +380,7 @@ export const scenarios: Scenario[] = [
     level: 6,
     title: 'Code Collision',
     subtitle: 'Merge Branches',
-    story: `Critical situation! Your feature branch is ready, but the code exists only in isolation. You need to merge it back into main — combining the parallel universes into one. Your mission: merge the feature branch into main and push the unified code to the remote. Handle this carefully, Agent — merges are where many developers stumble.`,
+    story: `Critical situation! Your feature branch has dashboard code that needs to go into main. You need to merge the branches — combining parallel universes into one.\n\nYour mission:\n1. Switch to main\n2. Merge feature/dashboard into main\n3. Push the merged result to remote\n4. Clean up by deleting the feature branch\n\nHandle this carefully, Agent — merges are where many stumble.`,
     objectives: [
       {
         id: 'switch-main',
@@ -411,10 +392,7 @@ export const scenarios: Scenario[] = [
         id: 'merge-feature',
         description: 'Merge feature/dashboard into main',
         completed: false,
-        check: (state) => {
-          const mainBranch = state.branches['main'];
-          return mainBranch?.commits.some(c => c.message.toLowerCase().includes('merge') && c.message.toLowerCase().includes('dashboard'));
-        },
+        check: (state) => state.branches['main']?.commits.some(c => c.message.toLowerCase().includes('merge') && c.message.toLowerCase().includes('dashboard')),
       },
       {
         id: 'push-merged',
@@ -429,123 +407,57 @@ export const scenarios: Scenario[] = [
       },
       {
         id: 'cleanup',
-        description: 'Delete the merged feature branch (local)',
+        description: 'Delete the merged feature/dashboard branch',
         completed: false,
         check: (state) => !state.branches['feature/dashboard'],
       },
     ],
     hints: [
-      'Switch to main: git checkout main',
-      'Merge the feature: git merge feature/dashboard',
-      'Push merged code: git push origin main',
-      'Clean up: git branch -d feature/dashboard',
+      'git checkout main',
+      'git merge feature/dashboard',
+      'git push origin main',
+      'git branch -d feature/dashboard',
     ],
-    initialState: () => baseState({
-      initialized: true,
-      currentBranch: 'main',
-      branches: {
-        main: {
-          name: 'main',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 200000,
-              parents: [],
-            },
-          ],
-          isActive: true,
-          color: '#00ff41',
+    initialState: () => (() => {
+      const c1 = commit('Initial commit', 'main', { 'README.md': '# Project' }, []);
+      const c2 = commit('Add dashboard layout', 'feature/dashboard', { 'README.md': '# Project', 'dashboard.js': '// layout code' }, [c1.hash]);
+      const c3 = commit('Add dashboard widgets', 'feature/dashboard', { 'README.md': '# Project', 'dashboard.js': '// layout + widgets' }, [c2.hash]);
+      return baseState({
+        initialized: true,
+        currentBranch: 'main',
+        branches: {
+          main: {
+            name: 'main',
+            commits: [c1],
+            isActive: true,
+            color: '#00ff41',
+          },
+          'feature/dashboard': {
+            name: 'feature/dashboard',
+            commits: [c1, c2, c3],
+            isActive: false,
+            color: '#00f0ff',
+          },
         },
-        'feature/dashboard': {
-          name: 'feature/dashboard',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 200000,
-              parents: [],
-            },
-            {
-              hash: 'b2c3d4e5f6g7h8i9j0k1',
-              shortHash: 'b2c3d4e',
-              message: 'Add dashboard layout',
-              branch: 'feature/dashboard',
-              timestamp: Date.now() - 100000,
-              parents: ['a1b2c3d4e5f6g7h8i9j0'],
-            },
-            {
-              hash: 'c3d4e5f6g7h8i9j0k1l2',
-              shortHash: 'c3d4e5f',
-              message: 'Add dashboard widgets',
-              branch: 'feature/dashboard',
-              timestamp: Date.now() - 50000,
-              parents: ['b2c3d4e5f6g7h8i9j0k1'],
-            },
-          ],
-          isActive: false,
-          color: '#00f0ff',
-        },
-      },
-      HEAD: 'a1b2c3d4e5f6g7h8i9j0',
-      remotes: {
-        origin: {
-          name: 'origin',
-          url: 'https://github.com/agency/project.git',
-          branches: {
-            main: {
-              name: 'main',
-              commits: [{
-                hash: 'a1b2c3d4e5f6g7h8i9j0',
-                shortHash: 'a1b2c3d',
-                message: 'Initial commit',
-                branch: 'main',
-                timestamp: Date.now() - 200000,
-                parents: [],
-              }],
-            },
-            'feature/dashboard': {
-              name: 'feature/dashboard',
-              commits: [
-                {
-                  hash: 'a1b2c3d4e5f6g7h8i9j0',
-                  shortHash: 'a1b2c3d',
-                  message: 'Initial commit',
-                  branch: 'main',
-                  timestamp: Date.now() - 200000,
-                  parents: [],
-                },
-                {
-                  hash: 'b2c3d4e5f6g7h8i9j0k1',
-                  shortHash: 'b2c3d4e',
-                  message: 'Add dashboard layout',
-                  branch: 'feature/dashboard',
-                  timestamp: Date.now() - 100000,
-                  parents: ['a1b2c3d4e5f6g7h8i9j0'],
-                },
-                {
-                  hash: 'c3d4e5f6g7h8i9j0k1l2',
-                  shortHash: 'c3d4e5f',
-                  message: 'Add dashboard widgets',
-                  branch: 'feature/dashboard',
-                  timestamp: Date.now() - 50000,
-                  parents: ['b2c3d4e5f6g7h8i9j0k1'],
-                },
-              ],
+        HEAD: c1.hash,
+        workspaceFiles: { 'README.md': '# Project' },
+        committedFiles: ['README.md'],
+        remotes: {
+          origin: {
+            name: 'origin',
+            url: 'https://github.com/agency/project.git',
+            branches: {
+              main: { name: 'main', commits: [c1] },
+              'feature/dashboard': { name: 'feature/dashboard', commits: [c1, c2, c3] },
             },
           },
         },
-      },
-    }),
+      });
+    })(),
     validate: (state) => {
-      const mainBranch = state.branches['main'];
-      if (!mainBranch?.commits.some(c => c.message.toLowerCase().includes('merge'))) return { completed: false, message: 'You haven\'t merged the feature branch yet.' };
-      if (state.branches['feature/dashboard']) return { completed: false, message: 'Delete the merged branch to clean up.' };
-      return { completed: true, message: 'Mission Complete! You\'ve successfully merged a feature branch and cleaned up. This is the standard workflow used by millions of developers every day through Pull Requests.' };
+      if (!state.branches['main']?.commits.some(c => c.message.toLowerCase().includes('merge'))) return { completed: false, message: 'You haven\'t merged the feature branch yet.' };
+      if (state.branches['feature/dashboard']) return { completed: false, message: 'Delete the merged branch: git branch -d feature/dashboard' };
+      return { completed: true, message: 'Mission Complete! You\'ve successfully merged and cleaned up. This is the standard Pull Request workflow!' };
     },
     reward: 200,
     commands: ['git checkout', 'git merge', 'git push', 'git branch -d'],
@@ -557,11 +469,11 @@ export const scenarios: Scenario[] = [
     level: 7,
     title: 'Emergency Protocol',
     subtitle: 'Stash and Context Switch',
-    story: `RED ALERT! You're in the middle of developing a critical feature when HQ reports a production bug. You can't commit half-finished work, but you can't abandon it either. Your mission: use Git Stash to save your work-in-progress, switch to main to fix the urgent bug, then restore your work and continue. This is real-world Git mastery, Agent.`,
+    story: `RED ALERT! You're in the middle of developing a search feature when HQ reports a production bug. You can't commit half-finished work, but can't abandon it either.\n\nYour mission:\n1. Stash your work-in-progress\n2. Switch to main and fix the urgent bug\n3. Go back and restore your work with stash pop\n\nThis is real-world Git mastery, Agent.`,
     objectives: [
       {
         id: 'stash-work',
-        description: 'Stash your current work-in-progress',
+        description: 'Stash your current work (git stash)',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'success' && l.content.includes('stash') && l.content.includes('Saved')),
       },
@@ -569,127 +481,73 @@ export const scenarios: Scenario[] = [
         id: 'switch-main',
         description: 'Switch to main branch',
         completed: false,
-        check: (state, history) => {
-          return state.currentBranch === 'main' && history.filter(l => l.type === 'input' && l.content.includes('checkout main')).length >= 1;
-        },
+        check: (state) => state.currentBranch === 'main',
       },
       {
-        id: 'fix-bug',
+        id: 'create-hotfix',
         description: 'Create hotfix/urgent-fix branch and commit a fix',
         completed: false,
         check: (state) => !!state.branches['hotfix/urgent-fix'] && state.branches['hotfix/urgent-fix'].commits.length > 1,
       },
       {
-        id: 'restore-work',
-        description: 'Go back to feature branch and restore stashed work',
+        id: 'go-back',
+        description: 'Switch back to feature/search',
         completed: false,
-        check: (state, history) => {
-          return state.currentBranch === 'feature/search' && history.some(l => l.type === 'input' && l.content.includes('stash pop'));
-        },
+        check: (state) => state.currentBranch === 'feature/search',
+      },
+      {
+        id: 'restore',
+        description: 'Restore stashed work (git stash pop)',
+        completed: false,
+        check: (_state, history) => history.some(l => l.type === 'success' && l.content.includes('Restored')),
       },
     ],
     hints: [
-      'Save your work: git stash',
+      'Save work: git stash',
       'Switch: git checkout main',
       'Create hotfix: git checkout -b hotfix/urgent-fix',
-      'Add and commit: git add README.md && git commit -m "fix critical bug"',
+      'Create fix file: touch fix.js && echo "bug fixed" > fix.js',
+      'Commit: git add fix.js && git commit -m "fix urgent bug"',
       'Go back: git checkout feature/search',
       'Restore: git stash pop',
     ],
-    initialState: () => baseState({
-      initialized: true,
-      currentBranch: 'feature/search',
-      branches: {
-        main: {
-          name: 'main',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 200000,
-              parents: [],
-            },
-            {
-              hash: 'f1e2d3c4b5a6f7e8d9c0',
-              shortHash: 'f1e2d3c',
-              message: 'Set up project',
-              branch: 'main',
-              timestamp: Date.now() - 100000,
-              parents: ['a1b2c3d4e5f6g7h8i9j0'],
-            },
-          ],
-          isActive: false,
-          color: '#00ff41',
+    initialState: () => (() => {
+      const c1 = commit('Initial commit', 'main', { 'README.md': '# Project' }, []);
+      const c2 = commit('Set up project', 'main', { 'README.md': '# Project\nReady.', 'app.js': '// main app' }, [c1.hash]);
+      return baseState({
+        initialized: true,
+        currentBranch: 'feature/search',
+        branches: {
+          main: { name: 'main', commits: [c1, c2], isActive: false, color: '#00ff41' },
+          'feature/search': { name: 'feature/search', commits: [c1, c2], isActive: true, color: '#f0ff00' },
         },
-        'feature/search': {
-          name: 'feature/search',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 200000,
-              parents: [],
-            },
-            {
-              hash: 'f1e2d3c4b5a6f7e8d9c0',
-              shortHash: 'f1e2d3c',
-              message: 'Set up project',
-              branch: 'main',
-              timestamp: Date.now() - 100000,
-              parents: ['a1b2c3d4e5f6g7h8i9j0'],
-            },
-          ],
-          isActive: true,
-          color: '#f0ff00',
+        HEAD: c2.hash,
+        workspaceFiles: {
+          'search.js': 'function search() { /* TODO */ }',
+          'search.test.js': '// tests',
+          'README.md': '# Project\nReady.',
+          'app.js': '// main app',
         },
-      },
-      HEAD: 'f1e2d3c4b5a6f7e8d9c0',
-      workspaceFiles: {
-        'search.js': 'export function search() { /* TODO: implement */ }',
-        'search.test.js': '// tests for search',
-      },
-      stagedFiles: ['search.js', 'search.test.js'],
-      remotes: {
-        origin: {
-          name: 'origin',
-          url: 'https://github.com/agency/project.git',
-          branches: {
-            main: {
-              name: 'main',
-              commits: [
-                {
-                  hash: 'a1b2c3d4e5f6g7h8i9j0',
-                  shortHash: 'a1b2c3d',
-                  message: 'Initial commit',
-                  branch: 'main',
-                  timestamp: Date.now() - 200000,
-                  parents: [],
-                },
-                {
-                  hash: 'f1e2d3c4b5a6f7e8d9c0',
-                  shortHash: 'f1e2d3c',
-                  message: 'Set up project',
-                  branch: 'main',
-                  timestamp: Date.now() - 100000,
-                  parents: ['a1b2c3d4e5f6g7h8i9j0'],
-                },
-              ],
+        stagedFiles: ['search.js'],
+        committedFiles: ['README.md', 'app.js'],
+        remotes: {
+          origin: {
+            name: 'origin',
+            url: 'https://github.com/agency/project.git',
+            branches: {
+              main: { name: 'main', commits: [c1, c2] },
             },
           },
         },
-      },
-    }),
+      });
+    })(),
     validate: (state) => {
-      if (!state.branches['hotfix/urgent-fix']) return { completed: false, message: 'You need to create the hotfix branch.' };
-      if (state.currentBranch !== 'feature/search') return { completed: false, message: 'Return to the feature/search branch.' };
-      return { completed: true, message: 'Mission Complete! You\'ve handled a real-world emergency like a pro. Stashing is one of Git\'s most underrated features — it saves developers daily!' };
+      if (!state.branches['hotfix/urgent-fix']) return { completed: false, message: 'Create the hotfix branch.' };
+      if (state.currentBranch !== 'feature/search') return { completed: false, message: 'Return to feature/search branch.' };
+      return { completed: true, message: 'Mission Complete! You handled a real-world emergency like a pro. Stashing saves developers daily!' };
     },
     reward: 200,
-    commands: ['git stash', 'git stash pop', 'git checkout'],
+    commands: ['git stash', 'git stash pop', 'git checkout', 'touch', 'git add', 'git commit'],
   },
 
   // ============ MISSION 8: TIME REWIND ============
@@ -698,120 +556,64 @@ export const scenarios: Scenario[] = [
     level: 8,
     title: 'Time Rewind',
     subtitle: 'Undo Mistakes with Reset',
-    story: `Disaster! An accidental commit pushed broken code into your feature branch. The agency needs you to rewind time — but carefully. Your mission: learn the different ways to undo commits. --soft keeps your changes, --hard destroys them. Choose wisely, Agent. One wrong move and your work could vanish forever.`,
+    story: `Disaster! An accidental commit pushed broken code into your feature branch. You need to rewind time — but carefully.\n\n--soft keeps your changes (safe)\n--hard destroys them (danger!)\n\nYour mission:\n1. Check the commit history to find the bad commit\n2. Undo it with --soft (safe undo)\n3. Verify your changes are still there\n\nChoose wisely, Agent.`,
     objectives: [
       {
         id: 'view-log',
-        description: 'View commit history to identify the bad commit',
+        description: 'View commit history (git log --oneline)',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git log')),
       },
       {
         id: 'soft-reset',
-        description: 'Use git reset --soft HEAD~1 to undo the last commit (keep changes)',
+        description: 'Undo last commit with --soft (git reset --soft HEAD~1)',
         completed: false,
-        check: (state, history) => {
-          return history.some(l => l.type === 'input' && l.content.includes('reset') && l.content.includes('--soft'));
-        },
+        check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('reset') && l.content.includes('--soft')),
       },
       {
-        id: 'verify-changes',
-        description: 'Verify your changes are still there with git status',
+        id: 'verify',
+        description: 'Verify changes are preserved (git status)',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git status')),
       },
     ],
     hints: [
-      'See your commits: git log --oneline',
-      'Undo last commit, keep changes: git reset --soft HEAD~1',
-      'Check if changes are preserved: git status',
-      'WARNING: git reset --hard HEAD~1 would DELETE your changes!',
+      'See commits: git log --oneline',
+      'Safe undo: git reset --soft HEAD~1 (keeps your changes)',
+      'Verify: git status',
+      'WARNING: git reset --hard HEAD~1 would DELETE everything!',
     ],
-    initialState: () => baseState({
-      initialized: true,
-      currentBranch: 'feature/auth',
-      branches: {
-        main: {
-          name: 'main',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 300000,
-              parents: [],
-            },
-          ],
-          isActive: false,
-          color: '#00ff41',
+    initialState: () => (() => {
+      const c1 = commit('Initial commit', 'main', { 'README.md': '# Project' }, []);
+      const c2 = commit('Add user model', 'feature/auth', { 'README.md': '# Project', 'user.js': 'class User {}' }, [c1.hash]);
+      const c3 = commit('Add auth middleware', 'feature/auth', { 'README.md': '# Project', 'user.js': 'class User {}', 'auth.js': 'function auth() {}' }, [c2.hash]);
+      const c4 = commit('BROKEN: accidentally pushed debug code', 'feature/auth', { 'README.md': '# Project', 'user.js': 'class User {}', 'auth.js': 'function auth() {}', 'debug.js': 'console.log everywhere' }, [c3.hash]);
+      return baseState({
+        initialized: true,
+        currentBranch: 'feature/auth',
+        branches: {
+          main: { name: 'main', commits: [c1], isActive: false, color: '#00ff41' },
+          'feature/auth': { name: 'feature/auth', commits: [c1, c2, c3, c4], isActive: true, color: '#bf5af2' },
         },
-        'feature/auth': {
-          name: 'feature/auth',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 300000,
-              parents: [],
-            },
-            {
-              hash: 'p1q2r3s4t5u6v7w8x9y0',
-              shortHash: 'p1q2r3s',
-              message: 'Add user model',
-              branch: 'feature/auth',
-              timestamp: Date.now() - 200000,
-              parents: ['a1b2c3d4e5f6g7h8i9j0'],
-            },
-            {
-              hash: 'q2r3s4t5u6v7w8x9y0z1',
-              shortHash: 'q2r3s4t',
-              message: 'Add auth middleware',
-              branch: 'feature/auth',
-              timestamp: Date.now() - 100000,
-              parents: ['p1q2r3s4t5u6v7w8x9y0'],
-            },
-            {
-              hash: 'r3s4t5u6v7w8x9y0z1a2',
-              shortHash: 'r3s4t5u',
-              message: 'BROKEN: accidentally pushed debug code',
-              branch: 'feature/auth',
-              timestamp: Date.now() - 50000,
-              parents: ['q2r3s4t5u6v7w8x9y0z1'],
-            },
-          ],
-          isActive: true,
-          color: '#bf5af2',
-        },
-      },
-      HEAD: 'r3s4t5u6v7w8x9y0z1a2',
-      remotes: {
-        origin: {
-          name: 'origin',
-          url: 'https://github.com/agency/project.git',
-          branches: {
-            main: {
-              name: 'main',
-              commits: [{
-                hash: 'a1b2c3d4e5f6g7h8i9j0',
-                shortHash: 'a1b2c3d',
-                message: 'Initial commit',
-                branch: 'main',
-                timestamp: Date.now() - 300000,
-                parents: [],
-              }],
+        HEAD: c4.hash,
+        workspaceFiles: { 'README.md': '# Project', 'user.js': 'class User {}', 'auth.js': 'function auth() {}', 'debug.js': 'console.log everywhere' },
+        committedFiles: ['README.md', 'user.js', 'auth.js', 'debug.js'],
+        remotes: {
+          origin: {
+            name: 'origin',
+            url: 'https://github.com/agency/project.git',
+            branches: {
+              main: { name: 'main', commits: [c1] },
             },
           },
         },
-      },
-    }),
+      });
+    })(),
     validate: (state) => {
       const authBranch = state.branches['feature/auth'];
       if (!authBranch) return { completed: false, message: 'Branch not found.' };
-      if (authBranch.commits.length >= 4 && authBranch.commits[3].message.includes('BROKEN')) return { completed: false, message: 'The broken commit is still there. Use git reset --soft HEAD~1 to undo it.' };
-      return { completed: true, message: 'Mission Complete! You\'ve learned to undo mistakes safely. Remember: --soft preserves changes, --hard destroys them. Use --soft when you want to re-commit with a better message or fix something first.' };
+      if (authBranch.commits.length >= 4 && authBranch.commits[3].message.includes('BROKEN')) return { completed: false, message: 'The broken commit is still there! Use: git reset --soft HEAD~1' };
+      return { completed: true, message: 'Mission Complete! You\'ve safely undone a mistake. --soft preserves changes, --hard destroys them. Remember the difference!' };
     },
     reward: 180,
     commands: ['git log', 'git reset --soft', 'git status'],
@@ -823,145 +625,71 @@ export const scenarios: Scenario[] = [
     level: 9,
     title: 'The Release',
     subtitle: 'Tag Your Milestones',
-    story: `The agency is ready to deploy version 1.0.0 of the project. But how will anyone know which commit represents the release? Your mission: use Git tags to mark the release point. Tags are like bookmarks in your project history — they mark important milestones that you can always come back to. Version management starts here, Agent.`,
+    story: `The agency is ready to deploy version 1.0.0 of the project. How will anyone know which commit represents the release?\n\nYour mission: use Git tags to mark the release point.\n1. Check the commit history\n2. Create an annotated tag v1.0.0\n3. List all tags\n4. Push the tag to remote\n\nTags are like bookmarks — they mark important milestones.`,
     objectives: [
       {
+        id: 'check-log',
+        description: 'View commit history (git log --oneline)',
+        completed: false,
+        check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git log')),
+      },
+      {
         id: 'create-tag',
-        description: 'Create an annotated tag v1.0.0 with a message',
+        description: 'Create annotated tag v1.0.0 with a message',
         completed: false,
         check: (state) => state.tags.includes('v1.0.0'),
       },
       {
         id: 'view-tags',
-        description: 'List all tags',
+        description: 'List all tags (git tag)',
         completed: false,
-        check: (_state, history) => history.some(l => l.type === 'input' && l.content.match(/git tag\s*$/)),
+        check: (_state, history) => history.some(l => l.type === 'input' && l.content.match(/git\s+tag\s*$/)),
       },
       {
         id: 'push-tag',
         description: 'Push the tag to remote',
         completed: false,
-        check: (_state, history) => history.some(l => l.type === 'success' && l.content.includes('v1.0.0') && l.content.includes('push')),
+        check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git push origin v1.0.0')),
       },
     ],
     hints: [
+      'View history: git log --oneline',
       'Create annotated tag: git tag -a v1.0.0 -m "first release"',
       'List tags: git tag',
       'Push tag: git push origin v1.0.0',
     ],
-    initialState: () => baseState({
-      initialized: true,
-      currentBranch: 'main',
-      branches: {
-        main: {
-          name: 'main',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 400000,
-              parents: [],
-            },
-            {
-              hash: 'b2c3d4e5f6g7h8i9j0k1',
-              shortHash: 'b2c3d4e',
-              message: 'Add core features',
-              branch: 'main',
-              timestamp: Date.now() - 300000,
-              parents: ['a1b2c3d4e5f6g7h8i9j0'],
-            },
-            {
-              hash: 'c3d4e5f6g7h8i9j0k1l2',
-              shortHash: 'c3d4e5f',
-              message: 'Add authentication system',
-              branch: 'main',
-              timestamp: Date.now() - 200000,
-              parents: ['b2c3d4e5f6g7h8i9j0k1'],
-            },
-            {
-              hash: 'd4e5f6g7h8i9j0k1l2m3',
-              shortHash: 'd4e5f6g',
-              message: 'Fix critical security issues',
-              branch: 'main',
-              timestamp: Date.now() - 100000,
-              parents: ['c3d4e5f6g7h8i9j0k1l2'],
-            },
-            {
-              hash: 'e5f6g7h8i9j0k1l2m3n4',
-              shortHash: 'e5f6g7h',
-              message: 'Ready for v1.0.0 release',
-              branch: 'main',
-              timestamp: Date.now() - 50000,
-              parents: ['d4e5f6g7h8i9j0k1l2m3'],
-            },
-          ],
-          isActive: true,
-          color: '#00ff41',
+    initialState: () => (() => {
+      const c1 = commit('Initial commit', 'main', { 'README.md': '# Project' }, []);
+      const c2 = commit('Add core features', 'main', { 'README.md': '# Project\n\nCore ready.', 'app.js': '// core' }, [c1.hash]);
+      const c3 = commit('Add auth system', 'main', { 'README.md': '# Project\n\nCore ready.\nAuth added.', 'app.js': '// core + auth', 'auth.js': 'function login() {}' }, [c2.hash]);
+      const c4 = commit('Fix security issues', 'main', { 'README.md': '# Project\n\nCore ready.\nAuth added.', 'app.js': '// core + auth (patched)', 'auth.js': 'function login() {} // patched' }, [c3.hash]);
+      const c5 = commit('Ready for v1.0.0 release', 'main', { 'README.md': '# Project v1.0.0\n\nProduction ready.', 'app.js': '// core + auth (patched)', 'auth.js': 'function login() {} // patched' }, [c4.hash]);
+      return baseState({
+        initialized: true,
+        currentBranch: 'main',
+        branches: {
+          main: { name: 'main', commits: [c1, c2, c3, c4, c5], isActive: true, color: '#00ff41' },
         },
-      },
-      HEAD: 'e5f6g7h8i9j0k1l2m3n4',
-      remotes: {
-        origin: {
-          name: 'origin',
-          url: 'https://github.com/agency/project.git',
-          branches: {
-            main: {
-              name: 'main',
-              commits: [
-                {
-                  hash: 'a1b2c3d4e5f6g7h8i9j0',
-                  shortHash: 'a1b2c3d',
-                  message: 'Initial commit',
-                  branch: 'main',
-                  timestamp: Date.now() - 400000,
-                  parents: [],
-                },
-                {
-                  hash: 'b2c3d4e5f6g7h8i9j0k1',
-                  shortHash: 'b2c3d4e',
-                  message: 'Add core features',
-                  branch: 'main',
-                  timestamp: Date.now() - 300000,
-                  parents: ['a1b2c3d4e5f6g7h8i9j0'],
-                },
-                {
-                  hash: 'c3d4e5f6g7h8i9j0k1l2',
-                  shortHash: 'c3d4e5f',
-                  message: 'Add authentication system',
-                  branch: 'main',
-                  timestamp: Date.now() - 200000,
-                  parents: ['b2c3d4e5f6g7h8i9j0k1'],
-                },
-                {
-                  hash: 'd4e5f6g7h8i9j0k1l2m3',
-                  shortHash: 'd4e5f6g',
-                  message: 'Fix critical security issues',
-                  branch: 'main',
-                  timestamp: Date.now() - 100000,
-                  parents: ['c3d4e5f6g7h8i9j0k1l2'],
-                },
-                {
-                  hash: 'e5f6g7h8i9j0k1l2m3n4',
-                  shortHash: 'e5f6g7h',
-                  message: 'Ready for v1.0.0 release',
-                  branch: 'main',
-                  timestamp: Date.now() - 50000,
-                  parents: ['d4e5f6g7h8i9j0k1l2m3'],
-                },
-              ],
+        HEAD: c5.hash,
+        workspaceFiles: { 'README.md': '# Project v1.0.0\n\nProduction ready.', 'app.js': '// core + auth (patched)', 'auth.js': 'function login() {} // patched' },
+        committedFiles: ['README.md', 'app.js', 'auth.js'],
+        remotes: {
+          origin: {
+            name: 'origin',
+            url: 'https://github.com/agency/project.git',
+            branches: {
+              main: { name: 'main', commits: [c1, c2, c3, c4, c5] },
             },
           },
         },
-      },
-    }),
+      });
+    })(),
     validate: (state) => {
-      if (!state.tags.includes('v1.0.0')) return { completed: false, message: 'Create the v1.0.0 tag first.' };
-      return { completed: true, message: 'Mission Complete! You\'ve tagged your first release. Tags are essential for version management — they let your team know exactly which code is in production.' };
+      if (!state.tags.includes('v1.0.0')) return { completed: false, message: 'Create the v1.0.0 tag: git tag -a v1.0.0 -m "first release"' };
+      return { completed: true, message: 'Mission Complete! Tags mark important milestones. Your team can always checkout a specific version!' };
     },
     reward: 150,
-    commands: ['git tag', 'git tag -a', 'git push'],
+    commands: ['git log', 'git tag', 'git tag -a', 'git push'],
   },
 
   // ============ MISSION 10: FINAL DEPLOYMENT ============
@@ -970,23 +698,29 @@ export const scenarios: Scenario[] = [
     level: 10,
     title: 'Final Deployment',
     subtitle: 'The Complete Workflow',
-    story: `This is it, Agent. The final mission. You must demonstrate complete mastery of the Git workflow: pull the latest code, create a feature branch, make commits, push to remote, merge back to main, and deploy. The agency is counting on you. Show them everything you've learned across all previous missions. This is the real-world developer workflow — execute it flawlessly.`,
+    story: `This is it, Agent. The final mission. Demonstrate complete mastery of the Git workflow.\n\n1. Pull latest code from main\n2. Create a feature branch\n3. Create a file, write code, stage, commit\n4. Push your branch to remote\n5. Merge back to main\n6. Tag the release as v2.0.0\n\nExecute the complete real-world developer workflow. The agency is counting on you.`,
     objectives: [
       {
-        id: 'pull-latest',
+        id: 'pull',
         description: 'Pull latest changes from main',
         completed: false,
         check: (_state, history) => history.some(l => l.type === 'input' && l.content.includes('git pull')),
       },
       {
-        id: 'create-feature',
+        id: 'create-branch',
         description: 'Create and switch to feature/final-feature branch',
         completed: false,
         check: (state) => state.currentBranch === 'feature/final-feature' && !!state.branches['feature/final-feature'],
       },
       {
-        id: 'commit-work',
-        description: 'Make at least one commit on your feature branch',
+        id: 'create-file',
+        description: 'Create feature.js and write content to it',
+        completed: false,
+        check: (state) => state.workspaceFiles['feature.js'] && state.workspaceFiles['feature.js'].length > 0,
+      },
+      {
+        id: 'commit',
+        description: 'Stage and commit your feature',
         completed: false,
         check: (state) => {
           const fb = state.branches['feature/final-feature'];
@@ -996,22 +730,19 @@ export const scenarios: Scenario[] = [
         },
       },
       {
-        id: 'push-feature',
+        id: 'push',
         description: 'Push feature branch to remote',
         completed: false,
         check: (state) => !!state.remotes['origin']?.branches['feature/final-feature'],
       },
       {
-        id: 'merge-main',
+        id: 'merge',
         description: 'Merge feature into main and push',
         completed: false,
-        check: (state) => {
-          const main = state.branches['main'];
-          return main?.commits.some(c => c.message.toLowerCase().includes('merge') && c.message.toLowerCase().includes('feature'));
-        },
+        check: (state) => state.branches['main']?.commits.some(c => c.message.toLowerCase().includes('merge') && c.message.toLowerCase().includes('feature')),
       },
       {
-        id: 'tag-release',
+        id: 'tag',
         description: 'Tag the release as v2.0.0',
         completed: false,
         check: (state) => state.tags.includes('v2.0.0'),
@@ -1020,93 +751,45 @@ export const scenarios: Scenario[] = [
     hints: [
       'git pull origin main',
       'git checkout -b feature/final-feature',
-      'git add README.md && git commit -m "add final feature"',
+      'touch feature.js && echo "export const feature = () => {}" > feature.js',
+      'git add feature.js',
+      'git commit -m "add final feature"',
       'git push origin feature/final-feature',
       'git checkout main && git merge feature/final-feature',
+      'git push origin main',
       'git tag v2.0.0 -m "final release"',
     ],
-    initialState: () => baseState({
-      initialized: true,
-      currentBranch: 'main',
-      branches: {
-        main: {
-          name: 'main',
-          commits: [
-            {
-              hash: 'a1b2c3d4e5f6g7h8i9j0',
-              shortHash: 'a1b2c3d',
-              message: 'Initial commit',
-              branch: 'main',
-              timestamp: Date.now() - 500000,
-              parents: [],
-            },
-            {
-              hash: 'b2c3d4e5f6g7h8i9j0k1',
-              shortHash: 'b2c3d4e',
-              message: 'Set up project structure',
-              branch: 'main',
-              timestamp: Date.now() - 400000,
-              parents: ['a1b2c3d4e5f6g7h8i9j0'],
-            },
-            {
-              hash: 'c3d4e5f6g7h8i9j0k1l2',
-              shortHash: 'c3d4e5f',
-              message: 'Add v1.0 features',
-              branch: 'main',
-              timestamp: Date.now() - 300000,
-              parents: ['b2c3d4e5f6g7h8i9j0k1'],
-            },
-          ],
-          isActive: true,
-          color: '#00ff41',
+    initialState: () => (() => {
+      const c1 = commit('Initial commit', 'main', { 'README.md': '# Project' }, []);
+      const c2 = commit('Set up project structure', 'main', { 'README.md': '# Project\n\nv1.0', 'index.html': '<html></html>' }, [c1.hash]);
+      const c3 = commit('Add v1.0 features', 'main', { 'README.md': '# Project\n\nv1.0', 'index.html': '<html></html>', 'app.js': '// v1 app' }, [c2.hash]);
+      return baseState({
+        initialized: true,
+        currentBranch: 'main',
+        branches: {
+          main: { name: 'main', commits: [c1, c2, c3], isActive: true, color: '#00ff41' },
         },
-      },
-      HEAD: 'c3d4e5f6g7h8i9j0k1l2',
-      remotes: {
-        origin: {
-          name: 'origin',
-          url: 'https://github.com/agency/project.git',
-          branches: {
-            main: {
-              name: 'main',
-              commits: [
-                {
-                  hash: 'a1b2c3d4e5f6g7h8i9j0',
-                  shortHash: 'a1b2c3d',
-                  message: 'Initial commit',
-                  branch: 'main',
-                  timestamp: Date.now() - 500000,
-                  parents: [],
-                },
-                {
-                  hash: 'b2c3d4e5f6g7h8i9j0k1',
-                  shortHash: 'b2c3d4e',
-                  message: 'Set up project structure',
-                  branch: 'main',
-                  timestamp: Date.now() - 400000,
-                  parents: ['a1b2c3d4e5f6g7h8i9j0'],
-                },
-                {
-                  hash: 'c3d4e5f6g7h8i9j0k1l2',
-                  shortHash: 'c3d4e5f',
-                  message: 'Add v1.0 features',
-                  branch: 'main',
-                  timestamp: Date.now() - 300000,
-                  parents: ['b2c3d4e5f6g7h8i9j0k1'],
-                },
-              ],
+        HEAD: c3.hash,
+        workspaceFiles: { 'README.md': '# Project\n\nv1.0', 'index.html': '<html></html>', 'app.js': '// v1 app' },
+        committedFiles: ['README.md', 'index.html', 'app.js'],
+        remotes: {
+          origin: {
+            name: 'origin',
+            url: 'https://github.com/agency/project.git',
+            branches: {
+              main: { name: 'main', commits: [c1, c2, c3] },
             },
           },
         },
-      },
-    }),
+      });
+    })(),
     validate: (state) => {
       const main = state.branches['main'];
-      if (!main?.commits.some(c => c.message.toLowerCase().includes('merge'))) return { completed: false, message: 'You need to merge the feature branch into main.' };
-      if (!state.tags.includes('v2.0.0')) return { completed: false, message: 'Tag the release as v2.0.0.' };
-      return { completed: true, message: 'MISSION ACCOMPLISHED! You\'ve demonstrated complete Git mastery — from init to deploy. You\'re now ready for real-world development. The agency is proud of you, Agent. Go forth and code!' };
+      if (!main?.commits.some(c => c.message.toLowerCase().includes('merge'))) return { completed: false, message: 'Merge the feature branch into main.' };
+      if (!state.tags.includes('v2.0.0')) return { completed: false, message: 'Tag the release: git tag v2.0.0 -m "final release"' };
+      return { completed: true, message: 'MISSION ACCOMPLISHED! You\'ve demonstrated complete Git mastery — from init to deploy. You\'re ready for real-world development!' };
     },
     reward: 300,
-    commands: ['git pull', 'git checkout -b', 'git commit', 'git push', 'git merge', 'git tag'],
+    commands: ['git pull', 'git checkout -b', 'touch', 'echo', 'git add', 'git commit', 'git push', 'git merge', 'git tag'],
   },
 ];

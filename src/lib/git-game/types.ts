@@ -5,6 +5,7 @@ export interface Commit {
   branch: string;
   timestamp: number;
   parents: string[];
+  files: Record<string, string>; // snapshot of files at this commit
 }
 
 export interface Branch {
@@ -28,7 +29,8 @@ export interface Remote {
 export interface StashEntry {
   id: string;
   message: string;
-  files: string[];
+  stagedFiles: string[];
+  workspaceFiles: Record<string, string>;
   timestamp: number;
 }
 
@@ -38,8 +40,9 @@ export interface GitState {
   currentBranch: string;
   branches: Record<string, Branch>;
   remotes: Record<string, Remote>;
-  workspaceFiles: Record<string, string>;
-  stagedFiles: string[];
+  workspaceFiles: Record<string, string>;  // files on disk (untracked + tracked)
+  stagedFiles: string[];                   // files added to staging area
+  committedFiles: string[];                // files that exist in the latest commit
   stash: StashEntry[];
   tags: string[];
   HEAD: string;

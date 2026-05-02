@@ -826,7 +826,7 @@ export default function Home() {
       {
         id: 'welcome',
         type: 'system',
-        content: `╔══════════════════════════════════════════════╗\n║  GITQUEST — Mission ${scenarios[idx].level}: ${scenarios[idx].title.padEnd(32)}║\n╚══════════════════════════════════════════════╝\n\n${scenarios[idx].story}\n\nType 'git' commands to complete your mission. Good luck, Agent!`,
+        content: `╔══════════════════════════════════════════════╗\n║  GITQUEST — Mission ${scenarios[idx].level}: ${scenarios[idx].title.padEnd(32)}║\n╚══════════════════════════════════════════════╝\n\n${scenarios[idx].story}\n\nShell commands available: touch, echo, cat, ls, mkdir, rm, pwd, clear, help\nType 'help' to see all commands. Good luck, Agent!`,
         timestamp: Date.now(),
       },
     ]);
@@ -849,6 +849,12 @@ export default function Home() {
     // Process command
     const result = processCommand(gitState, command);
 
+    // Handle clear command
+    if (result.message === '__CLEAR__') {
+      setTerminalHistory([]);
+      return;
+    }
+
     // Update state
     if (result.stateChanges) {
       setGitState(prev => {
@@ -857,16 +863,18 @@ export default function Home() {
       });
     }
 
-    // Add result line
+    // Add result line (skip empty messages like touch on existing files)
     const resultLineId = `result-${Date.now()}`;
-    setTerminalHistory(prev => [...prev, {
-      id: resultLineId,
-      type: result.success ? 'output' : 'error',
-      content: result.message,
-      timestamp: Date.now(),
-    }]);
+    if (result.message) {
+      setTerminalHistory(prev => [...prev, {
+        id: resultLineId,
+        type: result.success ? 'output' : 'error',
+        content: result.message,
+        timestamp: Date.now(),
+      }]);
+    }
 
-    if (soundEnabled) {
+    if (soundEnabled && result.message) {
       play(result.success ? 'success' : 'error');
     }
 
@@ -876,7 +884,7 @@ export default function Home() {
         const updatedState = { ...gitState, ...result.stateChanges } as GitState;
         const updatedHistory = [...terminalHistory,
           { id: lineId, type: 'input', content: command, timestamp: Date.now() },
-          { id: resultLineId, type: result.success ? 'output' : 'error', content: result.message, timestamp: Date.now() },
+          ...(result.message ? [{ id: resultLineId, type: result.success ? 'output' : 'error', content: result.message, timestamp: Date.now() }] : []),
         ];
         const validation = currentScenario.validate(updatedState);
 
